@@ -12,20 +12,38 @@ public class TodoService {
 
     private final TodoRepository todoRepository;
 
-    public Mono<ResponseEntity<?>> createTodo(TodoDto dto){
+    public Mono<ResponseEntity<?>> createTodo(Mono<Todo> todo){
 
-        Mono<Todo> todo = Mono.just(dto).map(dto1 -> {
-            Todo todo1 = new Todo();
-            todo1.setName(dto1.getName());
-            return todo1;
-        });
         todo = todoRepository.insert(todo).next();
-
 
         return Mono.just(
                 new ResponseEntity<>(
-                        todo.map(t -> new TodoDto(t.getName())),
+                        todo,
                         HttpStatus.OK)
         );
+    }
+
+    public Mono<ResponseEntity<?>> findAllUserTodos(){
+
+        return todoRepository.findAll()
+            .map(todo -> {
+
+                return new TodoResource(todo);
+            })
+            .collectList()
+            .map(todoResources -> new ResponseEntity<>(todoResources, HttpStatus.OK))
+        ;
+    }
+
+    public Mono<ResponseEntity<?>> updateTodo(Mono<Todo> todo) {
+
+        return todoRepository.saveAll(todo).collectList()
+                    .map(todos -> new ResponseEntity<>(todos, HttpStatus.OK))
+        ;
+    }
+
+    public void deleteTodo(Mono<String> id) {
+
+        id.map(s -> todoRepository.deleteById(s));
     }
 }
